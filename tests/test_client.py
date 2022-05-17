@@ -27,6 +27,8 @@ from dasbus.error import ErrorMapper, DBusError, ErrorRule
 from dasbus.signal import Signal
 from dasbus.specification import DBusSpecification
 from dasbus.typing import get_variant, get_variant_type, VariantType
+from dasbus.typing import variant_replace_handles_with_fdlist_indices
+from dasbus.typing import variant_replace_fdlist_indices_with_handles
 
 import gi
 gi.require_version("Gio", "2.0")
@@ -274,17 +276,17 @@ class DBusClientTestCase(unittest.TestCase):
 
     def _set_reply(self, reply_value):
         """Set the reply of the DBus call."""
-        self.connection.call_sync.reset_mock()
+        self.connection.call_with_unix_fd_list_sync.reset_mock()
 
         if isinstance(reply_value, Exception):
-            self.connection.call_sync.side_effect = reply_value
+            self.connection.call_with_unix_fd_list_sync.side_effect = reply_value
         else:
-            self.connection.call_sync.return_value = reply_value
+            self.connection.call_with_unix_fd_list_sync.return_value = reply_value
 
     def _check_call(self, interface_name, method_name, parameters=None,
                     reply_type=None):
         """Check the DBus call."""
-        self.connection.call_sync.assert_called_once_with(
+        self.connection.call_with_unix_fd_list_sync.assert_called_once_with(
             self.service_name,
             self.object_path,
             interface_name,
@@ -293,10 +295,11 @@ class DBusClientTestCase(unittest.TestCase):
             reply_type,
             DBUS_FLAG_NONE,
             GLibClient.DBUS_TIMEOUT_NONE,
+            None,
             None
         )
 
-        self.connection.call_sync.reset_mock()
+        self.connection.call_with_unix_fd_list_sync.reset_mock()
 
     def test_async_method(self):
         """Test asynchronous calls of a method proxy."""
@@ -368,7 +371,7 @@ class DBusClientTestCase(unittest.TestCase):
     def _check_async_call(self, interface_name, method_name, callback,
                           callback_args, parameters=None, reply_type=None):
         """Check the asynchronous DBus call."""
-        self.connection.call.assert_called_once_with(
+        self.connection.call_with_unix_fd_list.assert_called_once_with(
             self.service_name,
             self.object_path,
             interface_name,
@@ -377,6 +380,7 @@ class DBusClientTestCase(unittest.TestCase):
             reply_type,
             DBUS_FLAG_NONE,
             GLibClient.DBUS_TIMEOUT_NONE,
+            None,
             callback=GLibClient._async_call_finish,
             user_data=(
                 self.handler._method_callback,
@@ -384,7 +388,7 @@ class DBusClientTestCase(unittest.TestCase):
             )
         )
 
-        self.connection.call.reset_mock()
+        self.connection.call_with_unix_fd_list.reset_mock()
 
     def _finish_async_call(self, result, callback, callback_args):
         """Finish the asynchronous call."""
